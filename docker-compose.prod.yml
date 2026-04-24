@@ -1,0 +1,129 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-crypto24}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-crypto24_prod}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crypto24}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_URL: https://crypto24.co.il
+      DATABASE_URL: postgresql://${POSTGRES_USER:-crypto24}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-crypto24_prod}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      SESSION_SECRET: ${SESSION_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      RATE_SOURCE: ${RATE_SOURCE:-coingecko}
+      COINGECKO_API_KEY: ${COINGECKO_API_KEY:-}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_REGION: ${S3_REGION:-auto}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-crypto24-documents}
+      S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-}
+      PAYMENT_PAYBOX_ENABLED: ${PAYMENT_PAYBOX_ENABLED:-false}
+      PAYBOX_MERCHANT_ID: ${PAYBOX_MERCHANT_ID:-}
+      PAYBOX_API_KEY: ${PAYBOX_API_KEY:-}
+      PAYBOX_SECRET: ${PAYBOX_SECRET:-}
+      PAYBOX_API_URL: ${PAYBOX_API_URL:-https://api.payboxpay.com}
+      PAYMENT_BIT_ENABLED: ${PAYMENT_BIT_ENABLED:-false}
+      BIT_MERCHANT_ID: ${BIT_MERCHANT_ID:-}
+      BIT_API_KEY: ${BIT_API_KEY:-}
+      BIT_SECRET: ${BIT_SECRET:-}
+      PAYMENT_CRYPTO_ENABLED: ${PAYMENT_CRYPTO_ENABLED:-true}
+      COMPANY_BTC_WALLET: ${COMPANY_BTC_WALLET:-}
+      COMPANY_ETH_WALLET: ${COMPANY_ETH_WALLET:-}
+      COMPANY_USDT_TRC20_WALLET: ${COMPANY_USDT_TRC20_WALLET:-}
+      COMPANY_USDC_WALLET: ${COMPANY_USDC_WALLET:-}
+      UPAY_ENABLED: ${UPAY_ENABLED:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      FROM_EMAIL: ${FROM_EMAIL:-noreply@crypto24.co.il}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
+    networks:
+      - internal
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.crypto24.rule=Host(`crypto24.co.il`) || Host(`www.crypto24.co.il`)"
+      - "traefik.http.routers.crypto24.entrypoints=websecure"
+      - "traefik.http.routers.crypto24.tls.certresolver=letsencrypt"
+      - "traefik.http.services.crypto24.loadbalancer.server.port=3000"
+      # Redirect www -> non-www
+      - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https://www\\.crypto24\\.co\\.il/(.*)"
+      - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://crypto24.co.il/$${1}"
+      - "traefik.http.routers.crypto24.middlewares=www-redirect"
+
+  traefik:
+    image: traefik:v3.0
+    restart: always
+    command:
+      - "--api.dashboard=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@crypto24.co.il"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    networks:
+      - web
+
+volumes:
+  postgres_data:
+  redis_data:
+  letsencrypt:
+
+networks:
+  internal:
+  web:

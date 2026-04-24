@@ -1,0 +1,15 @@
+.git
+.github
+.next
+node_modules
+npm-debug.log*
+.env
+.env.local
+.env.development
+*.md
+.dockerignore
+docker-compose.yml
+docker-compose.prod.yml
+deploy.sh
+.claude
+.vscode

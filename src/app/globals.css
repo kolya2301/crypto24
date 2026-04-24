@@ -1,0 +1,286 @@
+/* ─── Fonts — MUST be first before any other rules ──────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Fonts ─────────────────────────────────────────────────────── */
+    --font-sans: 'Inter', system-ui, -apple-system, Arial, sans-serif;
+    --font-hebrew: 'Inter', 'Arial Hebrew', Arial, sans-serif;
+
+    /* ── Core palette — deep navy like Israeli fintech ─────────────── */
+    --background: 220 40% 4%;       /* #050C18 deep navy */
+    --foreground: 210 30% 97%;      /* almost white */
+
+    --card: 220 35% 8%;             /* #0E1929 */
+    --card-foreground: 210 30% 97%;
+
+    --popover: 220 35% 8%;
+    --popover-foreground: 210 30% 97%;
+
+    /* Electric blue — trust, banking */
+    --primary: 218 100% 58%;        /* #1E7FFF */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 35% 13%;
+    --secondary-foreground: 210 30% 97%;
+
+    --muted: 220 35% 13%;
+    --muted-foreground: 215 18% 52%;
+
+    /* Vivid green — money, success, CTA */
+    --accent: 151 86% 42%;          /* #12C46A */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 30% 16%;
+    --input: 220 35% 11%;
+    --ring: 218 100% 58%;
+    --radius: 0.75rem;
+
+    /* Safe area — iPhone */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    font-family: var(--font-sans);
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+  }
+
+  [dir="rtl"] { direction: rtl; }
+  [dir="ltr"] { direction: ltr; }
+
+  /* 44px min touch targets */
+  button, a[role="button"] { min-height: 44px; }
+  p a, li a { min-height: unset; }
+
+  /* Prevent iOS zoom on input focus */
+  @media (max-width: 1023px) {
+    input, select, textarea { font-size: 16px !important; }
+  }
+}
+
+/* ─── Brand Gradients ────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Blue → Purple (main brand) */
+  .gradient-brand {
+    background: linear-gradient(135deg, #1E7FFF 0%, #6B3FFF 100%);
+  }
+
+  /* Green → Teal (buy / success) */
+  .gradient-buy {
+    background: linear-gradient(135deg, #00C96B 0%, #00A8CC 100%);
+  }
+
+  /* Red → Orange (sell) */
+  .gradient-sell {
+    background: linear-gradient(135deg, #FF3B5C 0%, #FF8C00 100%);
+  }
+
+  /* Gold (premium / trust) */
+  .gradient-gold {
+    background: linear-gradient(135deg, #FFB020 0%, #FF7A00 100%);
+  }
+
+  /* Hero background mesh */
+  .gradient-hero {
+    background:
+      radial-gradient(ellipse 80% 60% at 20% -10%, rgba(30,127,255,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 110%, rgba(107,63,255,0.14) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(0,201,107,0.06) 0%, transparent 70%),
+      hsl(var(--background));
+  }
+
+  /* Glass morphism */
+  .glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  /* Text gradients */
+  .text-gradient-brand {
+    background: linear-gradient(135deg, #1E7FFF, #A855F7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-buy {
+    background: linear-gradient(135deg, #00C96B, #00D4FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Glow effects */
+  .glow-blue  { box-shadow: 0 0 30px rgba(30,127,255,0.3); }
+  .glow-green { box-shadow: 0 0 30px rgba(0,201,107,0.3); }
+  .glow-gold  { box-shadow: 0 0 20px rgba(255,176,32,0.25); }
+
+  /* Card shine effect */
+  .card-shine {
+    position: relative;
+    overflow: hidden;
+  }
+  .card-shine::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(transparent 0deg, rgba(255,255,255,0.03) 60deg, transparent 120deg);
+    animation: rotate-shine 8s linear infinite;
+    pointer-events: none;
+  }
+
+  /* Pill badge */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+
+  .badge-blue   { @apply badge bg-blue-500/15 text-blue-400 border border-blue-500/20; }
+  .badge-green  { @apply badge bg-emerald-500/15 text-emerald-400 border border-emerald-500/20; }
+  .badge-red    { @apply badge bg-red-500/15 text-red-400 border border-red-500/20; }
+  .badge-gold   { @apply badge bg-amber-500/15 text-amber-400 border border-amber-500/20; }
+  .badge-gray   { @apply badge bg-white/5 text-muted-foreground border border-white/8; }
+  .badge-purple { @apply badge bg-purple-500/15 text-purple-400 border border-purple-500/20; }
+}
+
+/* ─── Keyframes ──────────────────────────────────────────────────────────────── */
+@keyframes rotate-shine {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+/* ─── Mobile Header ──────────────────────────────────────────────────────────── */
+.mobile-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: calc(56px + var(--safe-top));
+  padding-top: var(--safe-top);
+  background: rgba(5, 12, 24, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Mobile Main Content ────────────────────────────────────────────────────── */
+.mobile-main-content {
+  padding-bottom: calc(64px + var(--safe-bottom));
+}
+
+/* ─── Mobile Bottom Navigation ──────────────────────────────────────────────── */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: stretch;
+  height: calc(60px + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: rgba(8, 16, 32, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.mobile-bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: hsl(var(--muted-foreground));
+  min-height: 60px;
+  transition: color 0.15s ease;
+  text-decoration: none;
+}
+
+.mobile-bottom-nav-item.active { color: hsl(var(--primary)); }
+.mobile-bottom-nav-item:active { transform: scale(0.9); transition: transform 0.1s ease; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+/* ─── Number input no spinners ───────────────────────────────────────────────── */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; }
+
+/* ─── Focus ring ─────────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Selection ──────────────────────────────────────────────────────────────── */
+::selection {
+  background: rgba(30, 127, 255, 0.25);
+  color: white;
+}

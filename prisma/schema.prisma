@@ -1,0 +1,692 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  visitor
+  registered_user
+  compliance_officer
+  finance_operator
+  admin
+}
+
+enum UserStatus {
+  active
+  suspended
+  pending_verification
+  deactivated
+}
+
+enum KycStatus {
+  not_submitted
+  pending_review
+  approved
+  rejected
+  expired
+  more_info_required
+}
+
+enum KycLevel {
+  none
+  basic      // ID verified
+  enhanced   // + proof of address, source of funds
+  full       // + enhanced due diligence
+}
+
+enum KycDocumentType {
+  id_front
+  id_back
+  passport
+  selfie
+  proof_of_address
+  source_of_funds
+  corporate_docs
+  other
+}
+
+enum DocumentStatus {
+  pending
+  approved
+  rejected
+}
+
+enum OrderType {
+  buy
+  sell
+}
+
+enum OrderStatus {
+  draft
+  submitted
+  pending_kyc
+  pending_review
+  awaiting_payment
+  payment_received
+  awaiting_crypto
+  crypto_received
+  payout_in_progress
+  completed
+  rejected
+  cancelled
+  on_hold
+  expired
+}
+
+enum CryptoCurrency {
+  BTC
+  ETH
+  USDT       // USDT ERC-20 (default)
+  USDT_TRC20 // USDT TRC-20 (Tron)
+  USDC
+  SOL        // Solana
+  LTC        // Litecoin
+  XMR        // Monero
+}
+
+enum FiatCurrency {
+  ILS
+  USD
+  EUR
+}
+
+enum PaymentMethod {
+  BIT
+  PAYBOX
+  CRYPTO_ONLY
+  MANUAL_BANK_OPTION_DISABLED_BY_DEFAULT
+}
+
+enum PaymentMethodStatus {
+  active
+  disabled
+  pending_approval
+}
+
+enum WalletVerificationStatus {
+  unverified
+  pending
+  verified
+  rejected
+}
+
+enum PaymentRecordStatus {
+  pending
+  confirmed
+  failed
+  refunded
+}
+
+enum LegalDocumentType {
+  terms_of_service
+  aml_kyc_policy
+  privacy_policy
+  risk_disclosure
+  refund_cancellation_policy
+  complaints_policy
+  cookie_policy
+  supported_payment_methods_policy
+}
+
+enum NotificationType {
+  order_status_change
+  kyc_status_change
+  document_requested
+  payment_received
+  payout_sent
+  security_alert
+  system_message
+}
+
+// ─── User ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id               String     @id @default(cuid())
+  email            String     @unique
+  phone            String
+  passwordHash     String
+  fullName         String
+  residencyCountry String     @default("IL")
+  role             UserRole   @default(registered_user)
+  status           UserStatus @default(pending_verification)
+  riskScore        Int        @default(0)   // 0-100; >70 = high risk
+  isEmailVerified  Boolean    @default(false)
+  isPhoneVerified  Boolean    @default(false)
+  lastLoginAt      DateTime?
+  lastLoginIp      String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  // Relations
+  kycProfile       KycProfile?
+  kycDocuments     KycDocument[]
+  wallets          Wallet[]
+  orders           Order[]    @relation("UserOrders")
+  reviewedOrders   Order[]    @relation("ReviewedOrders")
+  legalAcceptances LegalAcceptance[]
+  notifications    Notification[]
+  sessionLogs      SessionLog[]
+  auditLogsAsActor AuditLog[] @relation("AuditActor")
+  auditLogsAsSubject AuditLog[] @relation("AuditSubject")
+  crmClient        CrmClient? @relation("CrmClientUser")
+
+  @@index([email])
+  @@index([status])
+  @@index([role])
+}
+
+// ─── KYC Profile ──────────────────────────────────────────────────────────────
+
+model KycProfile {
+  id                  String     @id @default(cuid())
+  userId              String     @unique
+  user                User       @relation(fields: [userId], references: [id])
+
+  status              KycStatus  @default(not_submitted)
+  level               KycLevel   @default(none)
+
+  dateOfBirth         DateTime?
+  idNumber            String?    // Teudat Zehut or passport number (encrypted)
+  idType              String?    // "il_id" | "passport"
+  address             String?
+  city                String?
+  postalCode          String?
+  country             String?
+
+  // Risk flags
+  pepFlag             Boolean    @default(false)   // Politically Exposed Person
+  sanctionsFlag       Boolean    @default(false)
+  sanctionsCheckedAt  DateTime?
+  sourceOfFundsStatus String?    // "salary" | "business" | "investment" | "other"
+  sourceOfFundsNote   String?
+
+  // Review
+  reviewedBy          String?    // admin user id
+  reviewedAt          DateTime?
+  rejectionReason     String?
+  internalNotes       String?
+
+  submittedAt         DateTime?
+  expiresAt           DateTime?  // KYC expiry (e.g., 2 years)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@index([status])
+  @@index([sanctionsFlag])
+}
+
+// ─── KYC Document ─────────────────────────────────────────────────────────────
+
+model KycDocument {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+
+  documentType   KycDocumentType
+  fileUrl        String          // S3 signed or internal path
+  originalName   String
+  mimeType       String
+  sizeBytes      Int
+
+  status         DocumentStatus  @default(pending)
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  reviewerNote   String?
+
+  uploadedAt     DateTime        @default(now())
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ─── Wallet ───────────────────────────────────────────────────────────────────
+
+model Wallet {
+  id                 String                    @id @default(cuid())
+  userId             String
+  user               User                      @relation(fields: [userId], references: [id])
+
+  asset              CryptoCurrency
+  address            String
+  label              String?
+  network            String                    @default("mainnet") // "mainnet" | "testnet"
+  verificationStatus WalletVerificationStatus  @default(unverified)
+  verifiedAt         DateTime?
+  verifiedBy         String?                   // admin user id
+  isCompanyWallet    Boolean                   @default(false)     // true = company receiving wallet
+
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  orders             Order[]
+
+  @@unique([userId, address, asset])
+  @@index([userId])
+  @@index([isCompanyWallet, asset])
+}
+
+// ─── Quote ────────────────────────────────────────────────────────────────────
+
+model Quote {
+  id            String         @id @default(cuid())
+  userId        String
+  direction     OrderType
+  cryptoCurrency CryptoCurrency
+  fiatCurrency  FiatCurrency
+  rate          Decimal        @db.Decimal(18, 8)
+  cryptoAmount  Decimal        @db.Decimal(18, 8)
+  fiatAmount    Decimal        @db.Decimal(18, 2)
+  feeAmount     Decimal        @db.Decimal(18, 2)
+  feePercent    Decimal        @db.Decimal(5, 2)
+  spreadPercent Decimal        @db.Decimal(5, 2)
+  expiresAt     DateTime
+  isUsed        Boolean        @default(false)
+  isExpired     Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+
+  order         Order?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ─── Order ────────────────────────────────────────────────────────────────────
+
+model Order {
+  id                     String        @id @default(cuid())
+  userId                 String
+  user                   User          @relation("UserOrders", fields: [userId], references: [id])
+
+  type                   OrderType
+  asset                  CryptoCurrency
+  fiatCurrency           FiatCurrency
+  fiatAmount             Decimal       @db.Decimal(18, 2)
+  cryptoAmount           Decimal       @db.Decimal(18, 8)
+  rate                   Decimal       @db.Decimal(18, 8)
+  spread                 Decimal       @db.Decimal(5, 2)   // spread % applied
+  feeAmount              Decimal       @db.Decimal(18, 2)
+
+  // Quote
+  quoteId                String?       @unique
+  quote                  Quote?        @relation(fields: [quoteId], references: [id])
+  quoteExpiresAt         DateTime?
+
+  // Payment
+  paymentMethodRequested PaymentMethod
+  paymentMethodApproved  PaymentMethod?
+
+  // Wallet (for buy: destination; for sell: source — must be verified)
+  walletId               String?
+  wallet                 Wallet?       @relation(fields: [walletId], references: [id])
+
+  // Status & Compliance
+  status                 OrderStatus   @default(draft)
+  riskScore              Int           @default(0)
+  complianceNotes        String?
+  rejectionReason        String?
+  onHoldReason           String?
+
+  // Flags (all must be true before order can enter review)
+  kycApproved            Boolean       @default(false)
+  sanctionsCleared       Boolean       @default(false)
+  paymentMethodEligible  Boolean       @default(false)
+  walletValidated        Boolean       @default(false)
+  quoteValid             Boolean       @default(false)
+  legalAcknowledged      Boolean       @default(false)
+
+  // Admin review
+  approvedBy             String?
+  approvedByUser         User?         @relation("ReviewedOrders", fields: [approvedBy], references: [id])
+  approvedAt             DateTime?
+  completedAt            DateTime?
+
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  // Relations
+  paymentRecords         PaymentRecord[]
+  legalAcceptances       LegalAcceptance[]
+  auditLogs              AuditLog[]
+  notifications          Notification[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([type, status])
+}
+
+// ─── Payment Record ───────────────────────────────────────────────────────────
+
+model PaymentRecord {
+  id                String              @id @default(cuid())
+  orderId           String
+  order             Order               @relation(fields: [orderId], references: [id])
+
+  method            PaymentMethod
+  provider          String              // "bit" | "paybox" | "manual" | "blockchain"
+  providerReference String?             // External ref/tx hash
+  amount            Decimal             @db.Decimal(18, 8)
+  currency          String              // ILS / BTC / ETH etc
+  status            PaymentRecordStatus @default(pending)
+  confirmedAt       DateTime?
+  notes             String?
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([orderId])
+  @@index([providerReference])
+}
+
+// ─── Payment Method Config (admin-controlled) ─────────────────────────────────
+
+model PaymentMethodConfig {
+  id                    String              @id @default(cuid())
+  method                PaymentMethod       @unique
+  status                PaymentMethodStatus @default(active)
+  displayNameHe         String
+  displayNameRu         String
+
+  minAmountIls          Decimal             @db.Decimal(18, 2) @default(200)
+  maxAmountIls          Decimal             @db.Decimal(18, 2) @default(50000)
+  allowedForBuy         Boolean             @default(true)
+  allowedForSell        Boolean             @default(true)
+  requiresKycLevel      KycLevel            @default(basic)
+  requiresManualApproval Boolean            @default(true)
+  maxRiskScore          Int                 @default(70)  // orders above this score blocked
+
+  // Allowed assets (empty = all)
+  allowedAssets         String?             // JSON array: ["BTC","ETH"]
+
+  // Provider-specific config (JSON)
+  providerConfig        String              @default("{}") @db.Text
+
+  updatedBy             String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+}
+
+// ─── Rate / Spread Config (admin-controlled) ──────────────────────────────────
+
+model RateConfig {
+  id            String         @id @default(cuid())
+  asset         CryptoCurrency
+  fiatCurrency  FiatCurrency
+  spreadPercent Decimal        @db.Decimal(5, 2) @default(1.5)
+  feePercent    Decimal        @db.Decimal(5, 2) @default(0.5)
+  source        String         @default("manual") // "manual" | "binance" | "coingecko"
+  manualRate    Decimal?       @db.Decimal(18, 8) // override if source=manual
+  isActive      Boolean        @default(true)
+  updatedBy     String?
+  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime       @default(now())
+
+  @@unique([asset, fiatCurrency])
+}
+
+// ─── Legal Document (versioned) ───────────────────────────────────────────────
+
+model LegalDocument {
+  id          String            @id @default(cuid())
+  type        LegalDocumentType @unique
+  titleHe     String
+  titleRu     String
+  contentHe   String            @db.Text
+  contentRu   String            @db.Text
+  version     String            // e.g. "2024-01-15-v1"
+  isPublished Boolean           @default(false)
+  publishedAt DateTime?
+  publishedBy String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  acceptances LegalAcceptance[]
+}
+
+// ─── Legal Acceptance (immutable record) ──────────────────────────────────────
+
+model LegalAcceptance {
+  id              String            @id @default(cuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  orderId         String?
+  order           Order?            @relation(fields: [orderId], references: [id])
+
+  documentId      String
+  document        LegalDocument     @relation(fields: [documentId], references: [id])
+  documentType    LegalDocumentType
+  documentVersion String            // snapshot of version at time of acceptance
+
+  // Required per spec: text + timestamp + IP + userId + orderId
+  contentSnapshot String            @db.Text // full legal text at time of acceptance
+  acceptedAt      DateTime          @default(now())
+  ipAddress       String
+  userAgent       String
+  locale          String            @default("he")
+
+  @@index([userId])
+  @@index([orderId])
+  @@index([documentType])
+}
+
+// ─── Audit Log (immutable) ────────────────────────────────────────────────────
+
+model AuditLog {
+  id            String   @id @default(cuid())
+
+  actorUserId   String?
+  actorUser     User?    @relation("AuditActor", fields: [actorUserId], references: [id])
+  actorRole     String?
+
+  subjectUserId String?
+  subjectUser   User?    @relation("AuditSubject", fields: [subjectUserId], references: [id])
+
+  entityType    String?  // "order" | "user" | "kyc" | "wallet" | "payment_method" | etc
+  entityId      String?
+  orderId       String?
+  order         Order?   @relation(fields: [orderId], references: [id])
+
+  action        String   // verb: "order.submitted", "kyc.approved", "user.suspended" etc
+  description   String?
+
+  beforeJson    String?  @db.Text  // state before change
+  afterJson     String?  @db.Text  // state after change
+
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([subjectUserId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ─── Session Log ──────────────────────────────────────────────────────────────
+
+model SessionLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  ipAddress   String
+  userAgent   String
+  country     String?
+  action      String   // "login" | "logout" | "token_refresh" | "failed_login"
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ─── Notification ─────────────────────────────────────────────────────────────
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id])
+  orderId     String?
+  order       Order?           @relation(fields: [orderId], references: [id])
+  type        NotificationType
+  titleHe     String
+  titleRu     String
+  bodyHe      String
+  bodyRu      String
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, isRead])
+}
+
+// ─── Company Wallet Registry ──────────────────────────────────────────────────
+
+model CompanyWallet {
+  id        String         @id @default(cuid())
+  asset     CryptoCurrency
+  address   String
+  network   String         @default("mainnet")
+  label     String?
+  isActive  Boolean        @default(true)
+  addedBy   String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([asset, address])
+}
+
+// ─── CRM: Client Profile ───────────────────────────────────────────────────────
+
+enum CrmClientStatus {
+  lead          // just registered / contacted
+  active        // KYC approved, trading
+  vip           // high-volume client
+  inactive      // no activity 90+ days
+  blocked       // compliance blocked
+}
+
+enum CrmDealStage {
+  new           // just came in
+  contacted     // manager reached out
+  quote_sent    // quote generated
+  negotiating   // discussing terms
+  kyc_pending   // waiting for KYC
+  payment_pending // waiting for payment
+  completed     // deal done
+  lost          // deal failed / cancelled
+}
+
+enum CrmActivityType {
+  note          // manual note
+  call          // phone call
+  email         // email sent/received
+  order_created // order created (auto)
+  order_completed // order completed (auto)
+  kyc_approved  // KYC approved (auto)
+  status_changed // deal stage changed
+}
+
+model CrmClient {
+  id              String          @id @default(cuid())
+  userId          String          @unique  // links to User
+  user            User            @relation("CrmClientUser", fields: [userId], references: [id])
+  assignedTo      String?         // manager user id
+  status          CrmClientStatus @default(lead)
+  tags            String?         // JSON array: ["vip","hebrew"]
+  internalNotes   String?         @db.Text
+  totalVolume     Decimal         @db.Decimal(18, 2) @default(0) // total ILS volume
+  totalOrders     Int             @default(0)
+  avgOrderSize    Decimal         @db.Decimal(18, 2) @default(0)
+  lastActivityAt  DateTime?
+  firstDealAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  deals           CrmDeal[]
+  activities      CrmActivity[]
+
+  @@index([status])
+  @@index([assignedTo])
+  @@index([totalVolume])
+}
+
+model CrmDeal {
+  id            String        @id @default(cuid())
+  clientId      String
+  client        CrmClient     @relation(fields: [clientId], references: [id])
+  orderId       String?       // linked order if exists
+  assignedTo    String?       // manager user id
+
+  title         String        // e.g. "Buy 0.5 BTC — ₪125,000"
+  stage         CrmDealStage  @default(new)
+  asset         String?       // BTC, ETH, etc.
+  direction     String?       // "buy" | "sell"
+  estimatedAmount Decimal?    @db.Decimal(18, 2) // ILS
+  currency      String?       @default("ILS")
+  probability   Int           @default(50)   // % chance of closing
+  expectedCloseDate DateTime?
+  closedAt      DateTime?
+  lostReason    String?
+  notes         String?       @db.Text
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  activities    CrmActivity[]
+
+  @@index([clientId])
+  @@index([stage])
+  @@index([assignedTo])
+  @@index([createdAt])
+}
+
+model CrmActivity {
+  id          String          @id @default(cuid())
+  clientId    String
+  client      CrmClient       @relation(fields: [clientId], references: [id])
+  dealId      String?
+  deal        CrmDeal?        @relation(fields: [dealId], references: [id])
+  actorId     String?         // user id of person who created the activity
+  type        CrmActivityType @default(note)
+  title       String
+  body        String?         @db.Text
+  isAuto      Boolean         @default(false) // true = system-generated
+  createdAt   DateTime        @default(now())
+
+  @@index([clientId])
+  @@index([dealId])
+  @@index([createdAt])
+}
+
+// ─── CRM: Manager Task ────────────────────────────────────────────────────────
+
+enum CrmTaskStatus {
+  pending
+  in_progress
+  done
+  cancelled
+}
+
+model CrmTask {
+  id          String        @id @default(cuid())
+  clientId    String?       // optional: linked client
+  dealId      String?       // optional: linked deal
+  assignedTo  String        // manager user id
+  createdBy   String        // manager user id
+  title       String
+  description String?       @db.Text
+  dueAt       DateTime?
+  status      CrmTaskStatus @default(pending)
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([assignedTo, status])
+  @@index([dueAt])
+}
