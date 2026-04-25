@@ -143,7 +143,7 @@ export function ExchangeWidget({ locale, isLoggedIn }: { locale: string; isLogge
       >
         {ASSETS.map(a => (
           <option key={a.id} value={a.id} style={{ background: '#0e1929', color: '#fff' }}>
-            {a.id === 'USDT_TRC20' ? 'USDT-TRX' : a.id}
+            {a.id}
           </option>
         ))}
       </select>
@@ -239,7 +239,7 @@ export function ExchangeWidget({ locale, isLoggedIn }: { locale: string; isLogge
           </div>
           {/* Rate row */}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
-            <span>1 {asset === 'USDT_TRC20' ? 'USDT' : asset} ≈ {FIAT_SYMBOLS[fiat]}{liveRate ? (liveRate).toLocaleString() : '—'}</span>
+            <span>1 {asset} ≈ {FIAT_SYMBOLS[fiat]}{liveRate ? (liveRate).toLocaleString() : '—'}</span>
             {quote && <span>{t.fee}: {FIAT_SYMBOLS[fiat]}{feeAmt.toFixed(2)}</span>}
           </div>
         </div>
