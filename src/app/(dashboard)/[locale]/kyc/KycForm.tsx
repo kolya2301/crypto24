@@ -120,11 +120,70 @@ export function KycForm({ locale, existingProfile }: Props) {
     >
       <h2 style={{ color: 'white', fontWeight: 700, fontSize: 16, margin: 0 }}>{L.title}</h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: 14 }}>
         <div>
-          <label style={{ ...lbl, textAlign: isRtl ? 'right' : 'left' }}>{L.dob}</label>
-          <input type="date" value={form.dateOfBirth} onChange={e => update('dateOfBirth', e.target.value)}
-            required style={{ ...inp, textAlign: isRtl ? 'right' : 'left' }} />
+          <label style={{ ...lbl, textAlign: isRtl ? 'right' : 'left' }}>
+            {locale === 'he' ? 'יום' : 'День'}
+          </label>
+          <select
+            value={form.dateOfBirth.split('-')[2] || ''}
+            onChange={e => {
+              const [y, m] = form.dateOfBirth.split('-');
+              update('dateOfBirth', `${y || '2000'}-${m || '01'}-${e.target.value.padStart(2, '0')}`);
+            }}
+            style={{ ...inp, cursor: 'pointer' }}
+          >
+            <option value="">{locale === 'he' ? 'בחר יום' : 'Выберите день'}</option>
+            {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+              <option key={d} value={d} style={{ background: '#0f172a' }}>
+                {String(d).padStart(2, '0')}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={{ ...lbl, textAlign: isRtl ? 'right' : 'left' }}>
+            {locale === 'he' ? 'חודש' : 'Месяц'}
+          </label>
+          <select
+            value={form.dateOfBirth.split('-')[1] || ''}
+            onChange={e => {
+              const [y] = form.dateOfBirth.split('-');
+              const d = form.dateOfBirth.split('-')[2];
+              update('dateOfBirth', `${y || '2000'}-${e.target.value.padStart(2, '0')}-${d || '01'}`);
+            }}
+            style={{ ...inp, cursor: 'pointer' }}
+          >
+            <option value="">{locale === 'he' ? 'בחר חודש' : 'Выберите месяц'}</option>
+            {['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יוני', 'יולי', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'].map((m, i) => (
+              locale === 'he' ? (
+                <option key={i + 1} value={i + 1} style={{ background: '#0f172a' }}>{m}</option>
+              ) : null
+            ))}
+            {locale === 'ru' && ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'].map((m, i) => (
+              <option key={i + 1} value={i + 1} style={{ background: '#0f172a' }}>{m}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={{ ...lbl, textAlign: isRtl ? 'right' : 'left' }}>
+            {locale === 'he' ? 'שנה' : 'Год'}
+          </label>
+          <select
+            value={form.dateOfBirth.split('-')[0] || ''}
+            onChange={e => {
+              const [, m, d] = form.dateOfBirth.split('-');
+              update('dateOfBirth', `${e.target.value}-${m || '01'}-${d || '01'}`);
+            }}
+            style={{ ...inp, cursor: 'pointer' }}
+          >
+            <option value="">{locale === 'he' ? 'בחר שנה' : 'Выберите год'}</option>
+            {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map(y => (
+              <option key={y} value={y} style={{ background: '#0f172a' }}>
+                {y}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label style={{ ...lbl, textAlign: isRtl ? 'right' : 'left' }}>{L.idType}</label>
