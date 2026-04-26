@@ -34,7 +34,7 @@ export default async function DashboardLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
         <style>{`
           *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-          html, body { height: 100%; background: #050C18; color: #f1f5f9; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+          html, body { height: 100%; background: #050C18; color: #f1f5f9; font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif; }
           body { overscroll-behavior: none; -webkit-font-smoothing: antialiased; }
           a { color: inherit; text-decoration: none; }
           button { font-family: inherit; }

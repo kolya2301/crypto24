@@ -6,12 +6,13 @@ import { useRouter } from 'next/navigation';
 
 const labels = {
   he: {
-    title: 'הרשמה', fullName: 'שם מלא', email: 'אימייל',
+    title: 'הרשמה', subtitle: 'הצטרף למערכת המסחר',
+    fullName: 'שם מלא', email: 'אימייל',
     phone: 'טלפון (אופציונלי)', password: 'סיסמה',
     passwordHint: 'מינימום 8 תווים, אות גדולה ומספר',
     country: 'מדינת מגורים',
     legalPrefix: 'אני מסכים/ה ל',
-    terms: 'תנאי השימוש', and: 'ו-', privacy: 'מדיניות הפרטיות',
+    terms: 'תנאי השימוש', and: ' ו-', privacy: 'מדיניות הפרטיות',
     submit: 'יצירת חשבון', loading: 'יוצר חשבון...', hasAccount: 'כבר יש לך חשבון?', loginLink: 'כניסה',
     errors: {
       email_taken: 'כתובת האימייל כבר רשומה במערכת',
@@ -21,7 +22,8 @@ const labels = {
     },
   },
   ru: {
-    title: 'Регистрация', fullName: 'Полное имя', email: 'Email',
+    title: 'Регистрация', subtitle: 'Создайте аккаунт для торговли',
+    fullName: 'Полное имя', email: 'Email',
     phone: 'Телефон (необязательно)', password: 'Пароль',
     passwordHint: 'Минимум 8 символов, заглавная буква и цифра',
     country: 'Страна проживания',
@@ -47,6 +49,22 @@ const COUNTRIES = [
   { code: 'OTHER', he: 'אחר', ru: 'Другая' },
 ];
 
+const inputStyle = {
+  width: '100%', height: '48px', padding: '0 16px',
+  background: 'rgba(255,255,255,0.08)',
+  border: '1.5px solid rgba(255,255,255,0.2)',
+  borderRadius: '12px',
+  color: 'white', fontSize: '15px',
+  outline: 'none', boxSizing: 'border-box' as const,
+  fontFamily: 'inherit',
+};
+
+const labelStyle = {
+  display: 'block' as const,
+  color: '#cbd5e1', fontSize: '13px', fontWeight: '600' as const,
+  marginBottom: '8px',
+};
+
 export default function RegisterPage({ params }: { params: { locale: string } }) {
   const { locale } = params;
   const lbl = labels[locale as 'he' | 'ru'] ?? labels.he;
@@ -67,14 +85,8 @@ export default function RegisterPage({ params }: { params: { locale: string } })
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-
-    if (!legalAccepted) {
-      setError(lbl.errors.legal);
-      return;
-    }
-
+    if (!legalAccepted) { setError(lbl.errors.legal); return; }
     setLoading(true);
-
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -87,21 +99,13 @@ export default function RegisterPage({ params }: { params: { locale: string } })
           residencyCountry: form.residencyCountry,
         }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
-        if (data.error?.includes('EMAIL_TAKEN') || res.status === 409) {
-          setError(lbl.errors.email_taken);
-        } else if (data.error?.includes('PASSWORD') || data.error?.includes('password')) {
-          setError(lbl.errors.password_weak);
-        } else {
-          setError(lbl.errors.generic);
-        }
+        if (data.error?.includes('EMAIL_TAKEN') || res.status === 409) setError(lbl.errors.email_taken);
+        else if (data.error?.includes('PASSWORD') || data.error?.includes('password')) setError(lbl.errors.password_weak);
+        else setError(lbl.errors.generic);
         return;
       }
-
-      // Registration successful — redirect to dashboard (auto-logged in)
       router.push(`/${locale}/dashboard`);
       router.refresh();
     } catch {
@@ -111,162 +115,211 @@ export default function RegisterPage({ params }: { params: { locale: string } })
     }
   }
 
-  const inputClass = `w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary ${isRtl ? 'text-right' : ''}`;
-  const labelClass = `mb-1.5 block text-sm text-muted-foreground ${isRtl ? 'text-right' : ''}`;
+  function focusBorder(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
+    e.target.style.borderColor = '#3b82f6';
+  }
+  function blurBorder(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) {
+    e.target.style.borderColor = 'rgba(255,255,255,0.2)';
+  }
 
   return (
-    <div className="w-full max-w-md">
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-[#0E1929]/80 p-8 shadow-2xl backdrop-blur-2xl border border-white/10">
-        {/* Modern Accent Glow */}
-        <div className="absolute -right-20 -top-20 h-64 w-64 bg-primary/20 blur-[100px] pointer-events-none"></div>
-        <div className="absolute -left-20 -bottom-20 h-64 w-64 bg-accent/10 blur-[100px] pointer-events-none"></div>
-
-        <div className="relative z-10 w-full">
-          <div className="mb-10">
-            <h1 className={`text-4xl font-black text-white tracking-tighter ${isRtl ? 'text-right' : ''}`}>
-              {lbl.title}
-            </h1>
-            <p className={`mt-2 text-sm text-blue-400 font-medium ${isRtl ? 'text-right' : ''}`}>
-              {isRtl ? 'הצטרף למערכת המסחר המתקדמת' : 'Join our advanced trading portal'}
-            </p>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      }}
+      dir={isRtl ? 'rtl' : 'ltr'}
+    >
+      <div style={{ width: '100%', maxWidth: '460px' }}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: '56px', height: '56px', borderRadius: '16px',
+            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+            marginBottom: '16px', fontSize: '24px', fontWeight: 'bold', color: 'white',
+          }}>₿</div>
+          <div style={{ color: 'white', fontSize: '28px', fontWeight: '800', letterSpacing: '-0.5px' }}>
+            crypto24
           </div>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 gap-5">
-              {/* Full Name */}
-              <div className="space-y-2">
-                <label className={`text-xs font-bold uppercase tracking-wider text-muted-foreground/80 block ${isRtl ? 'text-right' : ''}`}>{lbl.fullName}</label>
-                <div className="relative group">
-                  <span className={`absolute top-1/2 -translate-y-1/2 text-lg pointer-events-none transition-all group-focus-within:text-primary ${isRtl ? 'right-4' : 'left-4'}`}>👤</span>
-                  <input 
-                    type="text" 
-                    value={form.fullName} 
-                    onChange={e => update('fullName', e.target.value)}
-                    required 
-                    className={`h-14 w-full rounded-2xl border border-white/10 bg-[#050C18]/60 px-4 text-sm text-white outline-none transition-all placeholder:text-muted-foreground/30 focus:border-primary focus:ring-4 focus:ring-primary/10 ${isRtl ? 'pr-12 text-right' : 'pl-12'}`} 
-                    autoComplete="name" 
-                    placeholder="ישראל ישראלי"
-                  />
-                </div>
+        {/* Card */}
+        <div style={{
+          background: 'rgba(255,255,255,0.07)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: '24px',
+          padding: '40px 36px',
+          backdropFilter: 'blur(20px)',
+        }}>
+          <h1 style={{ color: 'white', fontSize: '26px', fontWeight: '700', marginBottom: '6px', marginTop: 0 }}>
+            {lbl.title}
+          </h1>
+          <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '32px', marginTop: 0 }}>
+            {lbl.subtitle}
+          </p>
+
+          <form onSubmit={handleSubmit}>
+            {/* Full Name */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={labelStyle}>{lbl.fullName}</label>
+              <input
+                type="text"
+                value={form.fullName}
+                onChange={e => update('fullName', e.target.value)}
+                required
+                autoComplete="name"
+                placeholder={isRtl ? 'ישראל ישראלי' : 'Иван Иванов'}
+                style={inputStyle}
+                onFocus={focusBorder}
+                onBlur={blurBorder}
+              />
+            </div>
+
+            {/* Email + Phone row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+              <div>
+                <label style={labelStyle}>{lbl.email}</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={e => update('email', e.target.value)}
+                  required
+                  autoComplete="email"
+                  placeholder="name@mail.com"
+                  style={inputStyle}
+                  onFocus={focusBorder}
+                  onBlur={blurBorder}
+                />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Email */}
-                <div className="space-y-2">
-                  <label className={`text-xs font-bold uppercase tracking-wider text-muted-foreground/80 block ${isRtl ? 'text-right' : ''}`}>{lbl.email}</label>
-                  <div className="relative group">
-                    <span className={`absolute top-1/2 -translate-y-1/2 text-lg pointer-events-none transition-all group-focus-within:text-primary ${isRtl ? 'right-4' : 'left-4'}`}>📧</span>
-                    <input 
-                      type="email" 
-                      value={form.email} 
-                      onChange={e => update('email', e.target.value)}
-                      required 
-                      className={`h-14 w-full rounded-2xl border border-white/10 bg-[#050C18]/60 px-4 text-sm text-white outline-none transition-all placeholder:text-muted-foreground/30 focus:border-primary focus:ring-4 focus:ring-primary/10 ${isRtl ? 'pr-12 text-right' : 'pl-12'}`} 
-                      autoComplete="email" 
-                      placeholder="name@mail.com" 
-                    />
-                  </div>
-                </div>
-
-                {/* Phone */}
-                <div className="space-y-2">
-                  <label className={`text-xs font-bold uppercase tracking-wider text-muted-foreground/80 block ${isRtl ? 'text-right' : ''}`}>{lbl.phone}</label>
-                  <div className="relative group">
-                    <span className={`absolute top-1/2 -translate-y-1/2 text-lg pointer-events-none transition-all group-focus-within:text-primary ${isRtl ? 'right-4' : 'left-4'}`}>📱</span>
-                    <input 
-                      type="tel" 
-                      value={form.phone} 
-                      onChange={e => update('phone', e.target.value)}
-                      className={`h-14 w-full rounded-2xl border border-white/10 bg-[#050C18]/60 px-4 text-sm text-white outline-none transition-all placeholder:text-muted-foreground/30 focus:border-primary focus:ring-4 focus:ring-primary/10 ${isRtl ? 'pr-12 text-right' : 'pl-12'}`} 
-                      placeholder="+972..." 
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Country */}
-              <div className="space-y-2">
-                <label className={`text-xs font-bold uppercase tracking-wider text-muted-foreground/80 block ${isRtl ? 'text-right' : ''}`}>{lbl.country}</label>
-                <div className="relative group">
-                  <span className={`absolute top-1/2 -translate-y-1/2 text-lg pointer-events-none transition-all group-focus-within:text-primary ${isRtl ? 'right-4' : 'left-4'}`}>🌍</span>
-                  <select
-                    value={form.residencyCountry}
-                    onChange={e => update('residencyCountry', e.target.value)}
-                    className={`h-14 w-full rounded-2xl border border-white/10 bg-[#050C18]/60 px-4 text-sm text-white outline-none transition-all appearance-none cursor-pointer focus:border-primary focus:ring-4 focus:ring-primary/10 ${isRtl ? 'pr-12 text-right' : 'pl-12'}`}
-                  >
-                    {COUNTRIES.map(c => (
-                      <option key={c.code} value={c.code} className="bg-[#0E1929] text-white">
-                        {locale === 'he' ? c.he : c.ru}
-                      </option>
-                    ))}
-                  </select>
-                  <span className={`absolute top-1/2 -translate-y-1/2 pointer-events-none opacity-50 ${isRtl ? 'left-4' : 'right-4'}`}>▼</span>
-                </div>
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <label className={`text-xs font-bold uppercase tracking-wider text-muted-foreground/80 block ${isRtl ? 'text-right' : ''}`}>{lbl.password}</label>
-                <div className="relative group">
-                  <span className={`absolute top-1/2 -translate-y-1/2 text-lg pointer-events-none transition-all group-focus-within:text-primary ${isRtl ? 'right-4' : 'left-4'}`}>🔒</span>
-                  <input 
-                    type="password" 
-                    value={form.password} 
-                    onChange={e => update('password', e.target.value)}
-                    required 
-                    className={`h-14 w-full rounded-2xl border border-white/10 bg-[#050C18]/60 px-4 text-sm text-white outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 ${isRtl ? 'pr-12 text-right' : 'pl-12'}`} 
-                    autoComplete="new-password" 
-                  />
-                </div>
-                <p className={`text-[10px] font-medium text-muted-foreground/50 italic ${isRtl ? 'text-right' : ''}`}>
-                  {lbl.passwordHint}
-                </p>
+              <div>
+                <label style={labelStyle}>{lbl.phone}</label>
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={e => update('phone', e.target.value)}
+                  autoComplete="tel"
+                  placeholder="+972..."
+                  style={inputStyle}
+                  onFocus={focusBorder}
+                  onBlur={blurBorder}
+                />
               </div>
             </div>
 
+            {/* Country */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={labelStyle}>{lbl.country}</label>
+              <select
+                value={form.residencyCountry}
+                onChange={e => update('residencyCountry', e.target.value)}
+                style={{ ...inputStyle, cursor: 'pointer' }}
+                onFocus={focusBorder}
+                onBlur={blurBorder}
+              >
+                {COUNTRIES.map(c => (
+                  <option key={c.code} value={c.code} style={{ background: '#0f172a', color: 'white' }}>
+                    {locale === 'he' ? c.he : c.ru}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Password */}
+            <div style={{ marginBottom: '28px' }}>
+              <label style={labelStyle}>{lbl.password}</label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={e => update('password', e.target.value)}
+                required
+                autoComplete="new-password"
+                placeholder="••••••••"
+                style={inputStyle}
+                onFocus={focusBorder}
+                onBlur={blurBorder}
+              />
+              <p style={{ color: '#475569', fontSize: '12px', marginTop: '6px', marginBottom: 0 }}>
+                {lbl.passwordHint}
+              </p>
+            </div>
+
             {/* Legal */}
-            <div className={`flex items-start gap-3 rounded-2xl bg-white/5 p-4 border border-white/5 transition-all hover:bg-white/10 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: '12px',
+              flexDirection: isRtl ? 'row-reverse' : 'row',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '12px', padding: '14px 16px', marginBottom: '20px',
+            }}>
               <input
                 type="checkbox"
                 id="legal"
                 checked={legalAccepted}
                 onChange={e => setLegalAccepted(e.target.checked)}
-                className="mt-0.5 h-5 w-5 rounded border-white/20 bg-white/5 accent-primary cursor-pointer shadow-inner"
+                style={{ marginTop: '2px', width: '16px', height: '16px', cursor: 'pointer', flexShrink: 0, accentColor: '#3b82f6' }}
               />
-              <label htmlFor="legal" className={`text-xs text-muted-foreground leading-relaxed cursor-pointer select-none ${isRtl ? 'text-right' : ''}`}>
+              <label htmlFor="legal" style={{ color: '#94a3b8', fontSize: '13px', cursor: 'pointer', lineHeight: '1.5' }}>
                 {lbl.legalPrefix}
-                <Link href={`/${locale}/legal`} className="text-primary font-bold hover:underline mx-1">{lbl.terms}</Link>
+                <Link href={`/${locale}/legal`} style={{ color: '#60a5fa', fontWeight: '600', textDecoration: 'none' }}>
+                  {lbl.terms}
+                </Link>
                 {lbl.and}
-                <Link href={`/${locale}/legal`} className="text-primary font-bold hover:underline mx-1">{lbl.privacy}</Link>
+                <Link href={`/${locale}/legal`} style={{ color: '#60a5fa', fontWeight: '600', textDecoration: 'none' }}>
+                  {lbl.privacy}
+                </Link>
               </label>
             </div>
 
+            {/* Error */}
             {error && (
-              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-100 flex items-center gap-3 animate-slide-up">
-                <span className="text-lg">❕</span>
-                {error}
+              <div style={{
+                background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
+                borderRadius: '12px', padding: '12px 16px', marginBottom: '20px',
+                color: '#fca5a5', fontSize: '14px',
+              }}>
+                ⚠️ {error}
               </div>
             )}
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="group relative h-14 w-full overflow-hidden rounded-2xl gradient-brand text-sm font-black text-white uppercase tracking-widest shadow-2xl shadow-primary/20 transition-all hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:scale-100"
+              style={{
+                width: '100%', height: '50px',
+                background: loading ? 'rgba(59,130,246,0.5)' : 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                border: 'none', borderRadius: '14px',
+                color: 'white', fontSize: '15px', fontWeight: '700',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', letterSpacing: '0.3px',
+                transition: 'opacity 0.2s',
+              }}
+              onMouseEnter={e => { if (!loading) (e.target as HTMLElement).style.opacity = '0.9'; }}
+              onMouseLeave={e => { (e.target as HTMLElement).style.opacity = '1'; }}
             >
-              <span className="relative z-10">{loading ? lbl.loading : lbl.submit}</span>
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover:translate-x-full"></div>
+              {loading ? lbl.loading : lbl.submit}
             </button>
           </form>
 
-          <div className="mt-10 border-t border-white/5 pt-6 text-center">
-            <p className="text-sm font-bold text-muted-foreground">
-              {lbl.hasAccount}{' '}
-              <Link href={`/${locale}/login`} className="text-primary hover:text-blue-400 transition-colors ml-1">
-                {lbl.loginLink}
-              </Link>
-            </p>
-          </div>
+          {/* Login link */}
+          <p style={{ textAlign: 'center', marginTop: '24px', marginBottom: 0, color: '#94a3b8', fontSize: '14px' }}>
+            {lbl.hasAccount}{' '}
+            <Link href={`/${locale}/login`} style={{ color: '#60a5fa', fontWeight: '600', textDecoration: 'none' }}>
+              {lbl.loginLink}
+            </Link>
+          </p>
         </div>
+
+        {/* Footer */}
+        <p style={{ textAlign: 'center', marginTop: '24px', color: '#475569', fontSize: '12px' }}>
+          {isRtl ? 'מוסדר ומאובטח · כל הזכויות שמורות' : 'Регулируется и защищён · Все права защищены'}
+        </p>
       </div>
     </div>
   );
