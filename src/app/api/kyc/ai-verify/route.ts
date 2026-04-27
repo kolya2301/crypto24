@@ -2,7 +2,6 @@ import { NextRequest } from 'next/server';
 import { getSessionFromRequest } from '@/lib/auth';
 import { ok, unauthorized, err, serverError } from '@/lib/api-response';
 import { verifyKycDocument } from '@/lib/services/kyc-ai-verify.service';
-import { prisma } from '@/lib/prisma';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -37,14 +36,6 @@ export async function POST(req: NextRequest) {
       images,
       expectedIdNumber,
       expectedDateOfBirth: expectedDob,
-    });
-
-    await prisma.kycProfile.updateMany({
-      where: { userId: session.sub },
-      data: {
-        aiVerificationPassed: result.passed,
-        aiVerificationResult: result as object,
-      },
     });
 
     return ok(result);
