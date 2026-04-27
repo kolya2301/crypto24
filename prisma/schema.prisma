@@ -212,6 +212,9 @@ model KycProfile {
   rejectionReason     String?
   internalNotes       String?
 
+  aiVerificationPassed  Boolean?
+  aiVerificationResult  Json?
+
   submittedAt         DateTime?
   expiresAt           DateTime?  // KYC expiry (e.g., 2 years)
   createdAt           DateTime   @default(now())
