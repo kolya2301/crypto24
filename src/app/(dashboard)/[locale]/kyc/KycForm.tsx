@@ -2,7 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { AiVerifyResult } from '@/lib/services/kyc-ai-verify.service';
+
+interface AiVerifyResult {
+  passed: boolean;
+  idNumberMatch: boolean;
+  dobMatch: boolean;
+  isValidDocument: boolean;
+  notes: string;
+}
 
 interface Props {
   locale: string;
