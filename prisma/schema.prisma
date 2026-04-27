@@ -690,3 +690,112 @@ model CrmTask {
   @@index([assignedTo, status])
   @@index([dueAt])
 }
+
+// ─── Accounting ───────────────────────────────────────────────────────────────
+
+enum AccountingPeriodType {
+  monthly
+  bimonthly   // default for small VAT filers in Israel
+  quarterly
+  annual
+}
+
+enum AccountingPeriodStatus {
+  open
+  locked      // closed by finance operator, ready for accountant
+  filed       // VAT/tax return submitted
+}
+
+model AccountingPeriod {
+  id          String                  @id @default(cuid())
+  type        AccountingPeriodType    @default(bimonthly)
+  status      AccountingPeriodStatus  @default(open)
+  startDate   DateTime
+  endDate     DateTime
+  label       String                  // e.g. "01/2025 – 02/2025"
+  lockedAt    DateTime?
+  lockedBy    String?
+  filedAt     DateTime?
+  filedBy     String?
+  notes       String?                 @db.Text
+
+  vatReport   VatReport?
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+
+  @@index([startDate])
+  @@index([status])
+}
+
+// VatReport — דוח מע"מ דו-חודשי (ישראל, שיעור 17%)
+model VatReport {
+  id                    String           @id @default(cuid())
+  periodId              String           @unique
+  period                AccountingPeriod @relation(fields: [periodId], references: [id])
+
+  // Revenue from completed orders (fiat side)
+  grossRevenueIls       Decimal          @db.Decimal(18, 2) @default(0) // total fiat received
+  spreadRevenueIls      Decimal          @db.Decimal(18, 2) @default(0) // revenue from spread/fee
+  vatOnRevenueIls       Decimal          @db.Decimal(18, 2) @default(0) // 17% of spread revenue
+  vatRatePercent        Decimal          @db.Decimal(5, 2)  @default(17)
+
+  // Input VAT (purchases/expenses — if tracked)
+  inputVatIls           Decimal          @db.Decimal(18, 2) @default(0)
+
+  // Net VAT payable = vatOnRevenue - inputVat
+  vatPayableIls         Decimal          @db.Decimal(18, 2) @default(0)
+
+  // Order counts
+  totalOrders           Int              @default(0)
+  buyOrders             Int              @default(0)
+  sellOrders            Int              @default(0)
+
+  generatedAt           DateTime         @default(now())
+  generatedBy           String?
+}
+
+// PriceSnapshot — שווי שוק יומי לחישוב unrealized gains
+model PriceSnapshot {
+  id          String         @id @default(cuid())
+  asset       CryptoCurrency
+  fiatCurrency FiatCurrency  @default(ILS)
+  priceIls    Decimal        @db.Decimal(18, 8) // market price in ILS at snapshot time
+  source      String         @default("coingecko")
+  snapshotAt  DateTime       // the date this price represents (midnight UTC)
+  createdAt   DateTime       @default(now())
+
+  @@unique([asset, fiatCurrency, snapshotAt])
+  @@index([asset, snapshotAt])
+}
+
+// CryptoInventory — FIFO inventory for realized P&L per asset
+// Each completed BUY creates a lot; each SELL consumes lots (FIFO)
+model CryptoInventoryLot {
+  id              String         @id @default(cuid())
+  asset           CryptoCurrency
+  orderId         String         @unique  // the buy order that created this lot
+  cryptoAmount    Decimal        @db.Decimal(18, 8)
+  costBasisIls    Decimal        @db.Decimal(18, 2) // total ILS paid (fiatAmount)
+  costPerUnit     Decimal        @db.Decimal(18, 8) // costBasisIls / cryptoAmount
+  remainingAmount Decimal        @db.Decimal(18, 8) // decremented as sold
+  acquiredAt      DateTime       // completedAt of the buy order
+
+  @@index([asset, acquiredAt])
+}
+
+// RealizedGainRecord — one record per sell order, with FIFO breakdown
+model RealizedGainRecord {
+  id              String         @id @default(cuid())
+  orderId         String         @unique  // the sell order
+  asset           CryptoCurrency
+  cryptoSold      Decimal        @db.Decimal(18, 8)
+  proceedsIls     Decimal        @db.Decimal(18, 2) // fiatAmount received
+  costBasisIls    Decimal        @db.Decimal(18, 2) // FIFO cost of units sold
+  gainLossIls     Decimal        @db.Decimal(18, 2) // proceeds - costBasis (positive=gain)
+  isGain          Boolean
+  lots            String         @db.Text            // JSON: [{lotId, amount, cost}]
+  realizedAt      DateTime       // completedAt of sell order
+
+  @@index([asset, realizedAt])
+  @@index([realizedAt])
+}

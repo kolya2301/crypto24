@@ -102,6 +102,11 @@ export default async function AdminDashboardPage({ params }: { params: { locale:
             border: '1px solid rgba(255,255,255,0.12)',
             color: '#94a3b8', fontSize: 13, fontWeight: 600,
           }}>💱 שערים</Link>
+          <Link href={`/${locale}/admin/accounting`} style={{
+            padding: '8px 16px', borderRadius: 10,
+            border: '1px solid rgba(52,211,153,0.35)',
+            color: '#34d399', fontSize: 13, fontWeight: 700,
+          }}>📊 חשבונאות</Link>
         </div>
       </div>
 

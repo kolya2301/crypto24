@@ -135,7 +135,7 @@ export function KycForm({ locale, existingProfile }: Props) {
           >
             <option value="">{locale === 'he' ? 'בחר יום' : 'Выберите день'}</option>
             {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-              <option key={d} value={d} style={{ background: '#0f172a' }}>
+              <option key={d} value={String(d).padStart(2, '0')} style={{ background: '#0f172a' }}>
                 {String(d).padStart(2, '0')}
               </option>
             ))}
@@ -155,13 +155,10 @@ export function KycForm({ locale, existingProfile }: Props) {
             style={{ ...inp, cursor: 'pointer' }}
           >
             <option value="">{locale === 'he' ? 'בחר חודש' : 'Выберите месяц'}</option>
-            {['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יוני', 'יולי', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'].map((m, i) => (
-              locale === 'he' ? (
-                <option key={i + 1} value={i + 1} style={{ background: '#0f172a' }}>{m}</option>
-              ) : null
-            ))}
-            {locale === 'ru' && ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'].map((m, i) => (
-              <option key={i + 1} value={i + 1} style={{ background: '#0f172a' }}>{m}</option>
+            {locale === 'he' ? ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יוני', 'יולי', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'].map((m, i) => (
+              <option key={i + 1} value={String(i + 1).padStart(2, '0')} style={{ background: '#0f172a' }}>{m}</option>
+            )) : ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'].map((m, i) => (
+              <option key={i + 1} value={String(i + 1).padStart(2, '0')} style={{ background: '#0f172a' }}>{m}</option>
             ))}
           </select>
         </div>

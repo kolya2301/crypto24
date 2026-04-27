@@ -24,6 +24,10 @@ export function notFound(message = 'Not found') {
   return err(message, 404);
 }
 
+export function badRequest(message: string, details?: unknown) {
+  return err(message, 400, details);
+}
+
 export function validationError(message: string, details?: unknown) {
   return err(message, 422, details);
 }
