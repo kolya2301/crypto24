@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
+import { MobileUserMenu } from '@/components/layout/MobileUserMenu';
 
 const locales = ['he', 'ru', 'en', 'ar'];
 
@@ -43,7 +44,7 @@ export default async function DashboardLayout({
           ::-webkit-scrollbar-track { background: transparent; }
           ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 99px; }
           #dash-desktop { display: none; height: 100vh; overflow: hidden; background: #050C18; }
-          #dash-mobile  { display: flex; flex-direction: column; min-height: 100dvh; background: #050C18; }
+          #dash-mobile  { display: flex; flex-direction: column; min-height: 100dvh; background: #050C18; overflow-x: hidden; max-width: 100vw; }
           @media (min-width: 1024px) {
             #dash-desktop { display: flex; }
             #dash-mobile  { display: none; }
@@ -87,17 +88,13 @@ export default async function DashboardLayout({
                 }}>₿</div>
                 <span style={{ fontWeight: 800, fontSize: 15, color: 'white', letterSpacing: '-0.3px' }}>crypto24</span>
               </div>
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%',
-                background: 'rgba(59,130,246,0.2)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 13, fontWeight: 700, color: '#60a5fa',
-              }}>
-                {session.email[0].toUpperCase()}
-              </div>
+              <MobileUserMenu
+                initial={session.email[0].toUpperCase()}
+                locale={locale}
+              />
             </header>
 
-            <main style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
+            <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
               {children}
             </main>
 

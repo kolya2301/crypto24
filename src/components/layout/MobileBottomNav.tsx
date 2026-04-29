@@ -32,6 +32,7 @@ export function MobileBottomNav({ locale, userRole }: Props) {
     <nav style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
       display: 'flex', alignItems: 'stretch',
+      width: '100%', maxWidth: '100vw', overflow: 'hidden',
       height: 'calc(60px + env(safe-area-inset-bottom, 0px))',
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       background: 'rgba(5,10,24,0.97)',

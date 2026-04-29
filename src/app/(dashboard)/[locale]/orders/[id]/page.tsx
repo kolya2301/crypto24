@@ -20,9 +20,26 @@ const STATUS_BG: Record<string, string> = {
 
 const PAYMENT_INSTRUCTIONS = {
   BIT: { he: 'שלם דרך אפליקציית ביט. לאחר שולח, צור קשר עם הצוות שלנו לאישור.', ru: 'Оплатите через приложение Bit. После отправки свяжитесь с командой.' },
-  PAYBOX: { he: 'לחץ על קישור התשלום שיישלח אליך. לאחר תשלום המתן לאישור הצוות.', ru: 'Перейдите по ссылке оплаты. После оплаты ожидайте подтверждения.' },
+  PAYBOX: { he: 'תשלום בכרטיס אשראי דרך PayBox. תקבל קישור לתשלום בקרוב. לאחר התשלום המתן לאישור הצוות.', ru: 'Оплата картой через PayBox. Скоро получите ссылку для оплаты. После оплаты ожидайте подтверждения.' },
   CRYPTO_ONLY: { he: 'שלח את הקריפטו לכתובת הארנק של החברה. המתן לאישור הצוות.', ru: 'Отправьте криптовалюту на адрес кошелька компании.' },
 };
+
+const COMPLIANCE_ERRORS: Record<string, Record<string, string>> = {
+  kyc_not_approved:                    { he: 'הזהות שלך טרם אומתה — נא להשלים את תהליך KYC', ru: 'Личность не верифицирована — пройдите процесс KYC' },
+  sanctions_check_required:            { he: 'נדרשת בדיקת ציות — צור קשר עם התמיכה', ru: 'Требуется проверка санкций — обратитесь в поддержку' },
+  business_integration_not_configured: { he: 'השירות אינו זמין כרגע — נסה שוב מאוחר יותר', ru: 'Сервис временно недоступен — попробуйте позже' },
+  kyc_level_insufficient:              { he: 'רמת האימות אינה מספקת לסכום זה', ru: 'Уровень верификации недостаточен для этой суммы' },
+  payment_provider_unavailable:        { he: 'ספק התשלום אינו זמין כרגע — נסה אמצעי תשלום אחר', ru: 'Платёжный провайдер недоступен — попробуйте другой способ' },
+  payment_method_disabled_by_admin:    { he: 'אמצעי התשלום הזה אינו זמין כרגע', ru: 'Этот способ оплаты сейчас недоступен' },
+  kyc_pending_review:                  { he: 'הבקשה שלך נמצאת בבדיקה — המתן לאישור', ru: 'Ваша заявка на проверке — ожидайте подтверждения' },
+};
+
+function parseRejectionReason(reason: string | null, locale: string): { codes: string[]; raw: string | null } {
+  if (!reason) return { codes: [], raw: null };
+  const knownCodes = Object.keys(COMPLIANCE_ERRORS);
+  const found = knownCodes.filter(code => reason.includes(code));
+  return { codes: found, raw: found.length === 0 ? reason : null };
+}
 
 const card: React.CSSProperties = {
   background: 'rgba(255,255,255,0.05)',
@@ -142,17 +159,39 @@ export default async function OrderDetailPage({ params }: { params: { locale: st
       )}
 
       {/* Rejection notice */}
-      {order.status === 'rejected' && (
-        <div style={{
-          ...card, marginBottom: 20,
-          background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.25)',
-        }}>
-          <h3 style={{ color: '#f87171', fontWeight: 700, margin: '0 0 8px' }}>
-            {locale === 'he' ? '❌ ההזמנה נדחתה' : '❌ Заявка отклонена'}
-          </h3>
-          <p style={{ color: '#94a3b8', fontSize: 13, margin: 0 }}>{order.rejectionReason ?? '—'}</p>
-        </div>
-      )}
+      {order.status === 'rejected' && (() => {
+        const { codes, raw } = parseRejectionReason(order.rejectionReason, locale);
+        const loc = locale as 'he' | 'ru';
+        return (
+          <div style={{
+            ...card, marginBottom: 20,
+            background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.25)',
+          }}>
+            <h3 style={{ color: '#f87171', fontWeight: 700, fontSize: 15, margin: '0 0 12px' }}>
+              {locale === 'he' ? '❌ ההזמנה נדחתה' : '❌ Заявка отклонена'}
+            </h3>
+            {codes.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {codes.map(code => (
+                  <div key={code} style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 10,
+                    flexDirection: isRtl ? 'row-reverse' : 'row',
+                    padding: '10px 12px', borderRadius: 10,
+                    background: 'rgba(248,113,113,0.07)', border: '1px solid rgba(248,113,113,0.15)',
+                  }}>
+                    <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1.4 }}>⚠️</span>
+                    <span style={{ color: '#fca5a5', fontSize: 13, lineHeight: 1.5, textAlign: isRtl ? 'right' : 'left' }}>
+                      {COMPLIANCE_ERRORS[code]?.[loc] ?? COMPLIANCE_ERRORS[code]?.he ?? code}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: '#94a3b8', fontSize: 13, margin: 0, lineHeight: 1.5 }}>{raw ?? '—'}</p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Transaction details */}
       <div style={{ ...card, marginBottom: 20 }}>

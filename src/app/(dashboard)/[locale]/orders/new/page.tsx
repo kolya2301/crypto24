@@ -7,7 +7,7 @@ type Step = 'quote' | 'details' | 'review';
 type Direction = 'buy' | 'sell';
 type Asset = 'BTC' | 'ETH' | 'USDT' | 'USDC';
 type Fiat = 'ILS' | 'USD' | 'EUR';
-type Method = 'BIT' | 'PAYBOX' | 'CRYPTO_ONLY';
+type Method = 'BIT' | 'PAYBOX';
 
 const FIAT_SYMBOLS: Record<Fiat, string> = { ILS: '₪', USD: '$', EUR: '€' };
 const ASSET_ICONS: Record<Asset, string> = { BTC: '₿', ETH: 'Ξ', USDT: '₮', USDC: 'Ⓒ' };
@@ -28,7 +28,7 @@ const labels = {
     legalAck: 'קראתי ואני מסכים/ה לתנאי השימוש, מדיניות AML/KYC וגילוי הסיכונים',
     legalRequired: 'נדרש אישור תנאים', next: 'הבא', back: 'חזור',
     submit: 'שלח הזמנה', submitting: 'שולח...', quoteExpires: 'המחיר תקף עוד', seconds: 'שניות',
-    error: 'שגיאה. נסה שוב.', methodBit: 'ביט', methodPaybox: 'פייבוקס', methodCrypto: 'קריפטו ישיר',
+    error: 'שגיאה. נסה שוב.', methodBit: 'ביט', methodPaybox: 'כרטיס אשראי',
     noWallets: 'אין ארנקים מאומתים. הוסף ארנק בהגדרות.',
   },
   ru: {
@@ -41,7 +41,7 @@ const labels = {
     legalAck: 'Я прочитал(а) и согласен(на) с условиями использования, политикой AML/KYC и раскрытием рисков',
     legalRequired: 'Необходимо принять условия', next: 'Далее', back: 'Назад',
     submit: 'Подать заявку', submitting: 'Отправка...', quoteExpires: 'Котировка действительна', seconds: 'сек',
-    error: 'Ошибка. Попробуйте снова.', methodBit: 'Bit', methodPaybox: 'PayBox', methodCrypto: 'Прямой крипто',
+    error: 'Ошибка. Попробуйте снова.', methodBit: 'Bit', methodPaybox: 'Кредитная карта',
     noWallets: 'Нет верифицированных кошельков. Добавьте кошелёк в настройках.',
   },
 };
@@ -350,9 +350,8 @@ export default function NewOrderPage({ params }: { params: { locale: string } })
             <label style={{ ...lbl, textAlign: isRtl ? 'right' : 'left' }}>{L.paymentMethod}</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {([
-                ['BIT', L.methodBit, '🏦'],
-                ['PAYBOX', L.methodPaybox, '📱'],
-                ['CRYPTO_ONLY', L.methodCrypto, '₿'],
+                ['BIT',    L.methodBit,    '🏦'],
+                ['PAYBOX', L.methodPaybox, '💳'],
               ] as [Method, string, string][]).map(([m, label, icon]) => (
                 <button key={m} onClick={() => setMethod(m)} style={{
                   display: 'flex', alignItems: 'center', gap: 12,

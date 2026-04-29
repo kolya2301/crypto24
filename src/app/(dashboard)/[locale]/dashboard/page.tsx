@@ -57,19 +57,24 @@ export default async function DashboardPage({ params }: { params: { locale: stri
   ).length;
 
   return (
-    <div style={{
-      padding: '28px 24px', maxWidth: 900, margin: '0 auto',
-      fontFamily: "'Inter', -apple-system, sans-serif",
-      direction: isRtl ? 'rtl' : 'ltr',
-    }}>
+    <div
+      className="dash-page-wrap"
+      style={{
+        fontFamily: "'Inter', -apple-system, sans-serif",
+        direction: isRtl ? 'rtl' : 'ltr',
+      }}
+    >
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+      <div
+        className="dash-header-row"
+        style={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}
+      >
         <div>
-          <h1 style={{ color: 'white', fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: '-0.5px' }}>
+          <h1 style={{ color: 'white', fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.5px' }}>
             {locale === 'he' ? `שלום, ${username} 👋` : `Привет, ${username} 👋`}
           </h1>
-          <p style={{ color: '#64748b', fontSize: 14, margin: '4px 0 0' }}>
+          <p style={{ color: '#64748b', fontSize: 13, margin: '4px 0 0' }}>
             {locale === 'he' ? 'ניהול הזמנות ומעקב עסקאות' : 'Управление заявками и отслеживание сделок'}
           </p>
         </div>
@@ -77,9 +82,9 @@ export default async function DashboardPage({ params }: { params: { locale: stri
           href={`/${locale}/orders/new`}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '10px 20px', borderRadius: 12, flexShrink: 0,
+            padding: '9px 16px', borderRadius: 12, flexShrink: 0,
             background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-            color: 'white', fontSize: 14, fontWeight: 700, textDecoration: 'none',
+            color: 'white', fontSize: 13, fontWeight: 700, textDecoration: 'none',
             boxShadow: '0 4px 20px rgba(59,130,246,0.3)',
           }}
         >
@@ -89,28 +94,27 @@ export default async function DashboardPage({ params }: { params: { locale: stri
 
       {/* KYC banner */}
       {kycPending && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 16,
-          flexDirection: isRtl ? 'row-reverse' : 'row',
-          background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
-          borderRadius: 16, padding: '14px 20px', marginBottom: 24,
-        }}>
-          <span style={{ fontSize: 28, flexShrink: 0 }}>🪪</span>
-          <div style={{ flex: 1, textAlign: isRtl ? 'right' : 'left' }}>
-            <p style={{ color: '#fbbf24', fontWeight: 700, fontSize: 15, margin: 0 }}>
-              {locale === 'he' ? 'נדרש אימות זהות (KYC)' : 'Требуется верификация личности (KYC)'}
+        <div
+          className="dash-kyc-banner"
+          style={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}
+        >
+          <span style={{ fontSize: 26, flexShrink: 0 }}>🪪</span>
+          <div style={{ flex: 1, minWidth: 0, textAlign: isRtl ? 'right' : 'left' }}>
+            <p style={{ color: '#fbbf24', fontWeight: 700, fontSize: 14, margin: 0 }}>
+              {locale === 'he' ? 'נדרש אימות זהות (KYC)' : 'Требуется верификация (KYC)'}
             </p>
-            <p style={{ color: '#94a3b8', fontSize: 13, margin: '2px 0 0' }}>
-              {locale === 'he' ? 'בצע אימות כדי להתחיל לסחור' : 'Пройдите верификацию для начала торговли'}
+            <p style={{ color: '#94a3b8', fontSize: 12, margin: '2px 0 0' }}>
+              {locale === 'he' ? 'בצע אימות כדי להתחיל לסחור' : 'Пройдите верификацию для торговли'}
             </p>
           </div>
           <Link
             href={`/${locale}/kyc`}
             style={{
-              padding: '8px 16px', borderRadius: 10, flexShrink: 0,
+              padding: '7px 14px', borderRadius: 10, flexShrink: 0,
               border: '1px solid rgba(245,158,11,0.4)',
               color: '#fbbf24', fontSize: 13, fontWeight: 600, textDecoration: 'none',
               background: 'rgba(245,158,11,0.08)',
+              whiteSpace: 'nowrap',
             }}
           >
             {locale === 'he' ? 'אמת עכשיו' : 'Верифицировать'}
@@ -119,24 +123,25 @@ export default async function DashboardPage({ params }: { params: { locale: stri
       )}
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+      <div className="dash-stats-grid">
         {[
-          { label: locale === 'he' ? 'הזמנות אחרונות' : 'Последних заявок', value: recentOrders.length, icon: '📋', color: '#60a5fa' },
-          { label: locale === 'he' ? 'הזמנות פעילות' : 'Активных заявок', value: activeOrders, icon: '⚡', color: '#34d399' },
+          { label: locale === 'he' ? 'הזמנות' : 'Заявок', value: recentOrders.length, icon: '📋', color: '#60a5fa' },
+          { label: locale === 'he' ? 'פעילות' : 'Активных', value: activeOrders, icon: '⚡', color: '#34d399' },
           {
-            label: locale === 'he' ? 'סטטוס KYC' : 'Статус KYC',
-            value: kycApproved ? (locale === 'he' ? '✓ אושר' : '✓ Одобрен') : (locale === 'he' ? 'נדרש' : 'Требуется'),
+            label: 'KYC',
+            value: kycApproved ? '✓' : (locale === 'he' ? 'נדרש' : 'Нужен'),
             icon: '🪪', color: kycApproved ? '#34d399' : '#fbbf24',
           },
         ].map(stat => (
-          <div key={stat.label} style={{ ...card, padding: '20px 18px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-              <span style={{ fontSize: 24, flexShrink: 0 }}>{stat.icon}</span>
-              <div style={{ textAlign: isRtl ? 'right' : 'left' }}>
-                <p style={{ color: '#64748b', fontSize: 12, fontWeight: 500, margin: 0 }}>{stat.label}</p>
-                <p style={{ color: stat.color, fontSize: 22, fontWeight: 800, margin: '4px 0 0' }}>
-                  {typeof stat.value === 'number' ? stat.value : stat.value}
-                </p>
+          <div key={stat.label} className="dash-stat-card">
+            <div
+              className="dash-stat-inner"
+              style={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}
+            >
+              <span style={{ fontSize: 20, flexShrink: 0, lineHeight: 1 }}>{stat.icon}</span>
+              <div className="dash-stat-text" style={{ textAlign: isRtl ? 'right' : 'left' }}>
+                <p className="dash-stat-label">{stat.label}</p>
+                <p className="dash-stat-value" style={{ color: stat.color }}>{stat.value}</p>
               </div>
             </div>
           </div>

@@ -3,6 +3,16 @@ import { redirect, notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { AdminUserActions } from './AdminUserActions';
+import { getSignedDownloadUrl } from '@/lib/s3';
+
+async function tryGetSignedUrl(key: string): Promise<string | null> {
+  if (!process.env.S3_ACCESS_KEY_ID || !process.env.S3_ENDPOINT) return null;
+  try {
+    return await getSignedDownloadUrl(key, 3600);
+  } catch {
+    return null;
+  }
+}
 
 const card = {
   background: 'rgba(255,255,255,0.05)',
@@ -66,15 +76,23 @@ export default async function AdminUserDetailPage({
   if (!user) notFound();
 
   const kyc = user.kycProfile;
+
+  // Generate signed S3 URLs for KYC documents (server-side, safe to call here)
+  const kycDocsWithUrls = await Promise.all(
+    user.kycDocuments.map(async (doc) => ({
+      ...doc,
+      signedUrl: await tryGetSignedUrl(doc.fileUrl),
+    }))
+  );
   const completedOrders = user.orders.filter(o => o.status === 'completed');
   const totalVolume = completedOrders.reduce((s, o) => s + Number(o.fiatAmount), 0);
   const totalFees = completedOrders.reduce((s, o) => s + Number(o.feeAmount), 0);
 
   return (
-    <div style={{ padding: '24px 20px', maxWidth: 960, margin: '0 auto', fontFamily: "'Inter', sans-serif", direction: 'rtl' }}>
+    <div className="admin-page-wrap" style={{ fontFamily: "'Inter', sans-serif", direction: 'rtl' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
             width: 52, height: 52, borderRadius: '50%',
@@ -108,7 +126,7 @@ export default async function AdminUserDetailPage({
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
 
         {/* Basic info */}
         <div style={{ ...card }}>
@@ -189,31 +207,65 @@ export default async function AdminUserDetailPage({
       </div>
 
       {/* KYC Documents */}
-      {user.kycDocuments.length > 0 && (
+      {kycDocsWithUrls.length > 0 && (
         <div style={{ ...card, marginBottom: 16 }}>
-          <p style={{ color: 'white', fontWeight: 700, fontSize: 14, margin: '0 0 14px' }}>📄 מסמכי KYC ({user.kycDocuments.length})</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {user.kycDocuments.map(doc => (
-              <div key={doc.id} style={{
-                padding: '10px 14px', borderRadius: 10, fontSize: 12,
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                minWidth: 180,
-              }}>
-                <p style={{ color: '#60a5fa', fontWeight: 600, margin: 0 }}>{doc.documentType.replace(/_/g, ' ')}</p>
-                <p style={{ color: doc.status === 'approved' ? '#34d399' : doc.status === 'rejected' ? '#f87171' : '#fbbf24', fontSize: 11, margin: '4px 0 0', fontWeight: 600 }}>
-                  {doc.status}
-                </p>
-                <p style={{ color: '#475569', fontSize: 10, margin: '4px 0 0' }}>
-                  {new Date(doc.uploadedAt).toLocaleDateString('he-IL')}
-                </p>
-                {doc.fileUrl && (
-                  <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
-                    style={{ color: '#3b82f6', fontSize: 11, display: 'block', marginTop: 6 }}>
-                    צפה במסמך ↗
-                  </a>
-                )}
-              </div>
-            ))}
+          <p style={{ color: 'white', fontWeight: 700, fontSize: 14, margin: '0 0 14px' }}>📄 מסמכי KYC ({kycDocsWithUrls.length})</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+            {kycDocsWithUrls.map(doc => {
+              const isImage = doc.mimeType?.startsWith('image/');
+              const statusColor = doc.status === 'approved' ? '#34d399' : doc.status === 'rejected' ? '#f87171' : '#fbbf24';
+              return (
+                <div key={doc.id} style={{
+                  borderRadius: 12, overflow: 'hidden', fontSize: 12,
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                }}>
+                  {/* Image preview */}
+                  {isImage && doc.signedUrl ? (
+                    <a href={doc.signedUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={doc.signedUrl}
+                        alt={doc.documentType}
+                        style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }}
+                      />
+                    </a>
+                  ) : isImage && !doc.signedUrl ? (
+                    <div style={{
+                      width: '100%', height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'rgba(255,255,255,0.02)', flexDirection: 'column', gap: 6,
+                    }}>
+                      <span style={{ fontSize: 28 }}>🖼️</span>
+                      <span style={{ color: '#475569', fontSize: 10 }}>S3 не настроен</span>
+                    </div>
+                  ) : (
+                    <div style={{
+                      width: '100%', height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'rgba(255,255,255,0.02)',
+                    }}>
+                      <span style={{ fontSize: 36 }}>📄</span>
+                    </div>
+                  )}
+
+                  <div style={{ padding: '10px 12px' }}>
+                    <p style={{ color: '#60a5fa', fontWeight: 600, margin: 0, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {doc.documentType.replace(/_/g, ' ')}
+                    </p>
+                    <p style={{ color: statusColor, fontSize: 11, margin: '4px 0 0', fontWeight: 600 }}>
+                      {doc.status}
+                    </p>
+                    <p style={{ color: '#475569', fontSize: 10, margin: '4px 0 0' }}>
+                      {new Date(doc.uploadedAt).toLocaleDateString('he-IL')} · {doc.originalName}
+                    </p>
+                    {doc.signedUrl && (
+                      <a href={doc.signedUrl} target="_blank" rel="noopener noreferrer"
+                        style={{ color: '#3b82f6', fontSize: 11, display: 'inline-block', marginTop: 6, fontWeight: 600 }}>
+                        {isImage ? 'פתח תמונה ↗' : 'הורד PDF ↗'}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
