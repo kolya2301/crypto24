@@ -1,6 +1,7 @@
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
+import { HoverLink } from '@/components/ui/HoverLink';
 
 const STATUS_COLORS: Record<string, string> = {
   draft: '#64748b', submitted: '#60a5fa', pending_review: '#fbbf24', pending_kyc: '#fbbf24',
@@ -112,7 +113,7 @@ export default async function OrdersPage({
         <>
           <div style={card}>
             {orders.map((order, idx) => (
-              <Link
+              <HoverLink
                 key={order.id}
                 href={`/${locale}/orders/${order.id}`}
                 style={{
@@ -122,8 +123,6 @@ export default async function OrdersPage({
                   borderBottom: idx < orders.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
                   textDecoration: 'none', transition: 'background 0.15s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 {/* Type icon */}
                 <div style={{
@@ -163,7 +162,7 @@ export default async function OrdersPage({
                     {statLabels[order.status] ?? order.status}
                   </span>
                 </div>
-              </Link>
+              </HoverLink>
             ))}
           </div>
 

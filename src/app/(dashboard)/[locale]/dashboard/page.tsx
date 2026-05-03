@@ -1,6 +1,7 @@
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
+import { HoverLink } from '@/components/ui/HoverLink';
 
 const STATUS_LABELS: Record<string, Record<string, string>> = {
   he: {
@@ -177,7 +178,7 @@ export default async function DashboardPage({ params }: { params: { locale: stri
         ) : (
           <div>
             {recentOrders.map((order, idx) => (
-              <Link
+              <HoverLink
                 key={order.id}
                 href={`/${locale}/orders/${order.id}`}
                 style={{
@@ -188,8 +189,6 @@ export default async function DashboardPage({ params }: { params: { locale: stri
                   textDecoration: 'none',
                   transition: 'background 0.15s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 <div style={{
                   width: 40, height: 40, borderRadius: 12, flexShrink: 0,
@@ -219,7 +218,7 @@ export default async function DashboardPage({ params }: { params: { locale: stri
                     {statLabels[order.status] ?? order.status}
                   </p>
                 </div>
-              </Link>
+              </HoverLink>
             ))}
           </div>
         )}

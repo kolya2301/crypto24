@@ -1,6 +1,7 @@
 import { getSession, isComplianceOrAdmin, isFinanceOrAdmin } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { HoverLink } from '@/components/ui/HoverLink';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
 
@@ -117,7 +118,7 @@ export default async function AdminOrdersPage({
           <div style={{ padding: '48px', textAlign: 'center', color: '#64748b', fontSize: 14 }}>אין הזמנות</div>
         )}
         {orders.map((order, idx) => (
-          <Link
+          <HoverLink
             key={order.id}
             href={`/${locale}/admin/orders/${order.id}`}
             style={{
@@ -126,8 +127,6 @@ export default async function AdminOrdersPage({
               borderBottom: idx < orders.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
               textDecoration: 'none', transition: 'background 0.15s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
             {/* Type */}
             <div style={{
@@ -172,7 +171,7 @@ export default async function AdminOrdersPage({
                 {STATUS_HE[order.status] ?? order.status}
               </span>
             </div>
-          </Link>
+          </HoverLink>
         ))}
       </div>
 

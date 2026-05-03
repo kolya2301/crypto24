@@ -1,6 +1,7 @@
 import { getSession, isComplianceOrAdmin, isFinanceOrAdmin } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { HoverLink } from '@/components/ui/HoverLink';
 import { prisma } from '@/lib/prisma';
 import { KycStatus, OrderStatus } from '@prisma/client';
 
@@ -176,7 +177,7 @@ export default async function AdminDashboardPage({ params }: { params: { locale:
 
         <div>
           {recentOrders.map((order, idx) => (
-            <Link
+            <HoverLink
               key={order.id}
               href={`/${locale}/admin/orders/${order.id}`}
               style={{
@@ -186,8 +187,6 @@ export default async function AdminDashboardPage({ params }: { params: { locale:
                 textDecoration: 'none',
                 transition: 'background 0.15s',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               <div style={{
                 width: 38, height: 38, borderRadius: 10, flexShrink: 0,
@@ -225,7 +224,7 @@ export default async function AdminDashboardPage({ params }: { params: { locale:
                   {STATUS_HE[order.status] ?? order.status}
                 </span>
               </div>
-            </Link>
+            </HoverLink>
           ))}
 
           {recentOrders.length === 0 && (
