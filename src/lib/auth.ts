@@ -11,9 +11,14 @@ export interface JwtPayload {
   exp?: number;
 }
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
 const COOKIE_NAME = 'cc_session';
 const EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
+
+function getSecret(): Uint8Array {
+  const raw = process.env.JWT_SECRET;
+  if (!raw) throw new Error('JWT_SECRET environment variable is not set');
+  return new TextEncoder().encode(raw);
+}
 
 // ─── Sign token ───────────────────────────────────────────────────────────────
 
@@ -22,14 +27,14 @@ export async function signToken(payload: Omit<JwtPayload, 'iat' | 'exp'>): Promi
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(EXPIRES_IN)
-    .sign(secret);
+    .sign(getSecret());
 }
 
 // ─── Verify token ─────────────────────────────────────────────────────────────
 
 export async function verifyToken(token: string): Promise<JwtPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getSecret());
     return payload as unknown as JwtPayload;
   } catch {
     return null;
