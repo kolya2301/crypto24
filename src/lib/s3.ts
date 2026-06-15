@@ -1,25 +1,9 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { getR2Client, getR2Bucket } from './r2';
 
-let _s3: S3Client | null = null;
-
-function getS3Client(): S3Client {
-  if (!_s3) {
-    _s3 = new S3Client({
-      endpoint: process.env.S3_ENDPOINT,
-      region: process.env.S3_REGION || 'auto',
-      credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
-      },
-    });
-  }
-  return _s3;
-}
-
-function getBucket(): string {
-  return process.env.S3_BUCKET_NAME!;
-}
+const getS3Client = getR2Client;
+const getBucket = getR2Bucket;
 
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
