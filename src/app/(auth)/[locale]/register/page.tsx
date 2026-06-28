@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import OAuthButtons from '../oauth-buttons';
 
 const labels = {
   he: {
@@ -163,6 +164,8 @@ export default function RegisterPage({ params }: { params: { locale: string } })
           <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '32px', marginTop: 0 }}>
             {lbl.subtitle}
           </p>
+
+          <OAuthButtons locale={locale} />
 
           <form onSubmit={handleSubmit}>
             {/* Full Name */}
