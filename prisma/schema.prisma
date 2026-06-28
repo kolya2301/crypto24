@@ -149,8 +149,8 @@ enum NotificationType {
 model User {
   id               String     @id @default(cuid())
   email            String     @unique
-  phone            String
-  passwordHash     String
+  phone            String?
+  passwordHash     String?
   fullName         String
   residencyCountry String     @default("IL")
   role             UserRole   @default(registered_user)
@@ -158,6 +158,8 @@ model User {
   riskScore        Int        @default(0)   // 0-100; >70 = high risk
   isEmailVerified  Boolean    @default(false)
   isPhoneVerified  Boolean    @default(false)
+  googleId         String?    @unique
+  appleId          String?    @unique
   lastLoginAt      DateTime?
   lastLoginIp      String?
   createdAt        DateTime   @default(now())
@@ -354,6 +356,7 @@ model Order {
   legalAcceptances       LegalAcceptance[]
   auditLogs              AuditLog[]
   notifications          Notification[]
+  derivedAddress         DerivedAddress?
 
   @@index([userId])
   @@index([status])
@@ -547,18 +550,44 @@ model Notification {
 
 // ─── Company Wallet Registry ──────────────────────────────────────────────────
 
+enum AddressDerivationScheme {
+  STATIC
+  BIP84_SEGWIT
+}
+
 model CompanyWallet {
-  id        String         @id @default(cuid())
-  asset     CryptoCurrency
-  address   String
-  network   String         @default("mainnet")
-  label     String?
-  isActive  Boolean        @default(true)
-  addedBy   String
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id               String                  @id @default(cuid())
+  asset            CryptoCurrency
+  address          String
+  network          String                  @default("mainnet")
+  label            String?
+  isActive         Boolean                 @default(true)
+  addedBy          String
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  // HD derivation (public xpub only — no private keys ever stored)
+  derivationScheme AddressDerivationScheme @default(STATIC)
+  xpub             String?
+  nextIndex        Int                     @default(0)
+  derivedAddresses DerivedAddress[]
 
   @@unique([asset, address])
+}
+
+model DerivedAddress {
+  id              String         @id @default(cuid())
+  companyWalletId String
+  companyWallet   CompanyWallet  @relation(fields: [companyWalletId], references: [id])
+  orderId         String         @unique
+  order           Order          @relation(fields: [orderId], references: [id])
+  asset           CryptoCurrency
+  derivationIndex Int
+  address         String
+  createdAt       DateTime       @default(now())
+
+  @@unique([companyWalletId, derivationIndex])
+  @@index([address])
 }
 
 // ─── CRM: Client Profile ───────────────────────────────────────────────────────

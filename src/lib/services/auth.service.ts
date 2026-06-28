@@ -58,7 +58,7 @@ export class AuthService {
 
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
 
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
       await audit({
         action: auditActions.USER_LOGIN_FAILED,
         description: `Failed login attempt for ${email}`,

@@ -1,6 +1,24 @@
-import { Order, User } from '@prisma/client';
+import { CompanyWallet, CryptoCurrency, Order, User } from '@prisma/client';
 import { prisma } from '../prisma';
+import { deriveAddressFromXpub } from '../crypto/hd-derive';
 import { IPaymentProvider, PaymentLimits, PaymentRequest, PaymentRequestResult, PaymentStatusResult, ComplianceNotes } from './payment-provider.interface';
+
+async function deriveAndPersistAddress(
+  wallet: CompanyWallet,
+  orderId: string,
+  asset: CryptoCurrency,
+): Promise<string> {
+  const updated = await prisma.companyWallet.update({
+    where: { id: wallet.id },
+    data: { nextIndex: { increment: 1 } },
+  });
+  const index = updated.nextIndex - 1;
+  const address = deriveAddressFromXpub(updated.xpub!, index, asset as 'BTC' | 'LTC');
+  await prisma.derivedAddress.create({
+    data: { companyWalletId: wallet.id, orderId, asset, derivationIndex: index, address },
+  });
+  return address;
+}
 
 /**
  * CryptoTransferProvider — direct on-chain transfer to company wallet.
@@ -24,7 +42,7 @@ export class CryptoTransferProvider implements IPaymentProvider {
     return {
       minAmountIls: 500,
       maxAmountIls: 500000,
-      supportedCurrencies: ['BTC', 'ETH', 'USDT', 'USDC'],
+      supportedCurrencies: ['BTC', 'ETH', 'USDT', 'USDC', 'LTC'],
       supportedDirections: ['buy', 'sell'],
     };
   }
@@ -61,14 +79,19 @@ export class CryptoTransferProvider implements IPaymentProvider {
 
     const memo = order.id.slice(0, 8).toUpperCase();
 
+    let depositAddress = companyWallet.address;
+    if (companyWallet.xpub && companyWallet.derivationScheme === 'BIP84_SEGWIT') {
+      depositAddress = await deriveAndPersistAddress(companyWallet, order.id, order.asset);
+    }
+
     return {
       success: true,
       providerReference: `CRYPTO-${memo}`,
-      instructions: `שלח בדיוק ${order.cryptoAmount} ${order.asset} לכתובת: ${companyWallet.address}\nרשת: ${companyWallet.network}\nמזהה הזמנה (ממו): ${memo}\nחשוב: אל תשלח ממנה אחרת — ההעברה בלתי הפיכה.`,
-      instructionsRu: `Отправьте ровно ${order.cryptoAmount} ${order.asset} на адрес: ${companyWallet.address}\nСеть: ${companyWallet.network}\nID заказа (мемо): ${memo}\nВажно: не отправляйте на другой адрес — перевод необратим.`,
+      instructions: `שלח בדיוק ${order.cryptoAmount} ${order.asset} לכתובת: ${depositAddress}\nרשת: ${companyWallet.network}\nמזהה הזמנה (ממו): ${memo}\nחשוב: אל תשלח ממנה אחרת — ההעברה בלתי הפיכה.`,
+      instructionsRu: `Отправьте ровно ${order.cryptoAmount} ${order.asset} на адрес: ${depositAddress}\nСеть: ${companyWallet.network}\nID заказа (мемо): ${memo}\nВажно: не отправляйте на другой адрес — перевод необратим.`,
       expiresAt: request.expiresAt,
       providerData: {
-        companyWallet: companyWallet.address,
+        companyWallet: depositAddress,
         network: companyWallet.network,
         asset: order.asset,
         amount: order.cryptoAmount.toString(),
