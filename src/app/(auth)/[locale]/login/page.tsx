@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import OAuthButtons from '../oauth-buttons';
 
@@ -11,7 +10,6 @@ const labels = {
     subtitle: 'ברוך הבא חזרה',
     email: 'אימייל', password: 'סיסמה',
     submit: 'כניסה', loading: 'מתחבר...',
-    noAccount: 'אין לך חשבון?', registerLink: 'הרשמה',
     tabEmail: 'אימייל', tabPhone: 'טלפון',
     phone: 'מספר טלפון', phonePlaceholder: '+972501234567',
     code: 'קוד אימות', codePlaceholder: '______',
@@ -28,7 +26,6 @@ const labels = {
     subtitle: 'Добро пожаловать',
     email: 'Email', password: 'Пароль',
     submit: 'Войти', loading: 'Вход...',
-    noAccount: 'Нет аккаунта?', registerLink: 'Зарегистрироваться',
     tabEmail: 'Email', tabPhone: 'Телефон',
     phone: 'Номер телефона', phonePlaceholder: '+972501234567',
     code: 'Код подтверждения', codePlaceholder: '______',
@@ -49,7 +46,7 @@ export default function LoginPage({ params }: { params: { locale: string } }) {
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') ?? `/${locale}/dashboard`;
 
-  const [mode, setMode] = useState<'email' | 'phone'>('email');
+  const [mode, setMode] = useState<'email' | 'phone'>('phone');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -364,13 +361,6 @@ export default function LoginPage({ params }: { params: { locale: string } }) {
             </form>
           )}
 
-          {/* Register link */}
-          <p style={{ textAlign: 'center', marginTop: '24px', marginBottom: 0, color: '#94a3b8', fontSize: '14px' }}>
-            {lbl.noAccount}{' '}
-            <Link href={`/${locale}/register`} style={{ color: '#60a5fa', fontWeight: '600', textDecoration: 'none' }}>
-              {lbl.registerLink}
-            </Link>
-          </p>
         </div>
 
         {/* Footer */}
