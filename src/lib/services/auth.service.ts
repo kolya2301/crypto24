@@ -17,6 +17,9 @@ export class AuthService {
     const existing = await prisma.user.findUnique({ where: { email: input.email.toLowerCase() } });
     if (existing) throw new Error('EMAIL_EXISTS');
 
+    const existingPhone = await prisma.user.findFirst({ where: { phone: input.phone } });
+    if (existingPhone) throw new Error('PHONE_EXISTS');
+
     const passwordHash = await bcrypt.hash(input.password, 12);
 
     const user = await prisma.user.create({

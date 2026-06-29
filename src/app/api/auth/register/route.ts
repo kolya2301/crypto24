@@ -4,9 +4,10 @@ import { authService } from '@/lib/services/auth.service';
 import { ok, created, err, validationError, serverError } from '@/lib/api-response';
 import { makeSessionCookie } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import { PLACEHOLDER_EMAIL_DOMAIN } from '@/lib/services/phone-auth.service';
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.string().email().refine(v => !v.toLowerCase().endsWith(PLACEHOLDER_EMAIL_DOMAIN), 'Invalid email'),
   password: z.string().min(8).regex(/[A-Z]/, 'Must contain uppercase').regex(/[0-9]/, 'Must contain number'),
   phone: z.string().min(9).max(20),
   fullName: z.string().min(2).max(120),
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : '';
     if (msg === 'EMAIL_EXISTS') return err('Email is already registered', 409);
+    if (msg === 'PHONE_EXISTS') return err('Phone number is already registered', 409);
     return serverError();
   }
 }
